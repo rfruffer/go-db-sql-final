@@ -23,6 +23,7 @@ func (s ParcelService) Register(client int, address string) (Parcel, error) {
 
 	id, err := s.store.Add(parcel)
 	if err != nil {
+		fmt.Errorf("add row failed %w", err)
 		return parcel, err
 	}
 

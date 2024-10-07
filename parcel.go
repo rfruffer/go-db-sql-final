@@ -22,12 +22,12 @@ func (s ParcelStore) Add(p Parcel) (int, error) {
 		sql.Named("address", p.Address),
 		sql.Named("created_at", p.CreatedAt))
 	if err != nil {
-		fmt.Println(err)
+		fmt.Errorf("query row failed %w", err)
 		return 0, err
 	}
 	id, err := res.LastInsertId()
 	if err != nil {
-		fmt.Println(err)
+		fmt.Errorf("get last index failed %w", err)
 		return 0, err
 	}
 	//fmt.Println(res.LastInsertId())
@@ -60,19 +60,24 @@ func (s ParcelStore) GetByClient(client int) ([]Parcel, error) {
 	var res []Parcel
 	rows, err := s.db.Query("SELECT number, client, status, address, created_at FROM parcel WHERE client = :client", sql.Named("client", client))
 	if err != nil {
+		fmt.Errorf("query row failed %w", err)
 		return res, err
 	}
 	defer rows.Close()
 
 	for rows.Next() {
 		p := Parcel{}
-
 		err := rows.Scan(&p.Number, &p.Client, &p.Status, &p.Address, &p.CreatedAt)
 		if err != nil {
+			fmt.Errorf("scan rows failed %w", err)
 			return res, err
 		}
-
 		res = append(res, p)
+	}
+	err = rows.Err()
+	if err == nil {
+		fmt.Errorf("scan next rows failed %w", err)
+		return res, err
 	}
 	return res, nil
 }
@@ -83,7 +88,7 @@ func (s ParcelStore) SetStatus(number int, status string) error {
 		sql.Named("status", status),
 		sql.Named("id", number))
 	if err != nil {
-		fmt.Println(err)
+		fmt.Errorf("update row failed %w", err)
 		return err
 	}
 	return nil
@@ -97,13 +102,14 @@ func (s ParcelStore) SetAddress(number int, address string) error {
 		sql.Named("id", number),
 		sql.Named("status", ParcelStatusRegistered)).Scan(&count)
 	if err != nil || count == 0 {
-		return fmt.Errorf("no row")
+		fmt.Errorf("query row failed %w", err)
+		return err
 	}
 	_, err = s.db.Exec("UPDATE parcel SET address = :address WHERE number = :id",
 		sql.Named("address", address),
 		sql.Named("id", number))
 	if err != nil {
-		fmt.Println(err)
+		fmt.Errorf("update row failed %w", err)
 		return err
 	}
 	return nil
@@ -117,11 +123,12 @@ func (s ParcelStore) Delete(number int) error {
 		sql.Named("id", number),
 		sql.Named("status", ParcelStatusRegistered)).Scan(&count)
 	if err != nil || count == 0 {
-		return fmt.Errorf("no row")
+		fmt.Errorf("query row failed %w", err)
+		return err
 	}
 	_, err = s.db.Exec("DELETE FROM parcel WHERE number = :id", sql.Named("id", number))
 	if err != nil {
-		fmt.Println(err)
+		fmt.Errorf("delete row failed %w", err)
 		return err
 	}
 	return nil
